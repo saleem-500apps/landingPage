@@ -3,113 +3,109 @@
 
 <head>
     <title>Gmail</title>
-    <script src="https://apis.google.com/js/api.js"></script>
+    <!-- <script src="https://apis.google.com/js/api.js" onload="this.onload=function(){};handleClientLoad()"
+    onreadystatechange="if (this.readyState === 'complete') this.onload()"></script> -->
 </head>
 
 <body>
-    <script>
+    <script type="text/javascript">
         const discoveryDocs = ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"];
         const scope = "https://www.googleapis.com/auth/gmail.readonly";
         const apiKey =
             "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InNyaWxhdGhhLm5hc2Fnb25pQDUwMGFwcHMuY29tIiwidXNlcl9pZCI6MTg5LCJjcmVhdGVkX2RhdGUiOiIxNjEzOTg3MzAyIiwidGVuYW50X2lkIjoxLCJwcm9qZWN0X2lkIjoxOTJ9.7EXKSTZy1fALFHni-m7AdO77gTDVjWNMr_pBeRVw-kA";
 
-        class Gmail {
-            constructor() {
-                this.params = {
-                    apiKey: apiKey,
-                    clientId: "173641818547-7vsj9e77j0euovpv2ol8ua22repc80n3.apps.googleusercontent.com",
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"],
-                    scope: "https://www.googleapis.com/auth/gmail.readonly",
-                };
-            }
-            handleClientLoad(appId, appName, type) {
-                this.appId = appId;
-                this.appName = appName;
-                this.type = type;
-                gapi.load("client:auth2", this.initClient);
-            }
+        // class Gmail {
+        // constructor() {
+        const params = {
+            apiKey: apiKey,
+            clientId: "173641818547-7vsj9e77j0euovpv2ol8ua22repc80n3.apps.googleusercontent.com",
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"],
+            scope: "https://www.googleapis.com/auth/gmail.readonly",
+        };
+        // }
+        function handleClientLoad(type) {
+            this.type = type;
+            gapi.load("client:auth2", this.initClient);
+        }
 
-            async initClient() {
-                await gapi.client.init(window._Gmail.params);
-                let isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
-                if (isSignedIn) await window._Gmail.updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
-                else {
-                    gapi.auth2.getAuthInstance().signIn();
-                    await gapi.auth2.getAuthInstance().isSignedIn.listen((signedIn) => {
-                        window._Gmail.updateSigninStatus(signedIn);
-                    });
-                }
-            }
-            updateSigninStatus(isSignedIn) {
-                if (isSignedIn && this.type == "Add") window._AppConfig.addPlugin({}, this.appId, this.appName);
-            }
-            async getGmailData() {
-                if (gapi.auth2) return await this.checkSignedIn();
-                await new Promise((resolve, reject) => {
-                    gapi.load("client:auth2", resolve);
+        async function initClient() {
+            await gapi.client.init(params);
+            let isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+            if (isSignedIn) await updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+            else {
+                gapi.auth2.getAuthInstance().signIn();
+                await gapi.auth2.getAuthInstance().isSignedIn.listen((signedIn) => {
+                    updateSigninStatus(signedIn);
                 });
-                await gapi.client.init(window._Gmail.params);
-                return await this.checkSignedIn();
-            }
-            async checkSignedIn() {
-                let isSignedIn = await gapi.auth2.getAuthInstance().isSignedIn.get();
-                if (!isSignedIn) return;
-                return await this.getEmails();
-            }
-
-            signOut() {
-                gapi.auth2.getAuthInstance().signOut();
-            }
-
-            async getEmails() {
-                let gmailData = [];
-                let obj = {
-                    userId: "me",
-                    labelIds: "INBOX",
-                    maxResults: 10,
-                };
-                let mailObj = {
-                    userId: "me",
-                };
-                let mails = await gapi.client.gmail.users.messages.list(obj);
-                for (var item of mails.result.messages) {
-                    mailObj.id = item.id;
-                    let data = await gapi.client.gmail.users.messages.get(mailObj);
-                    let mail = this.filterMails(data.result);
-                    gmailData.push(mail);
-                }
-                this.emails = gmailData
-                console.log(window._Gmail.emails);
-                return gmailData;
-            }
-
-            filterMails(data) {
-                let mail = {
-                    id: data.id
-                };
-                let keys = ["From", "To", "Subject", "Date", "Content-Type"];
-                keys.forEach((key) => {
-                    mail[key.toLowerCase().replace("-", "_")] = data.payload.headers.find((i) => i.name == key).value;
-                });
-                if (data.payload.mimeType == "multipart/alternative") {
-                    let index = data.payload.parts.findIndex(i => i.mimeType == "text/html")
-                    var msg = data.payload.parts[index].body.data.replace(/-/g, '+').replace(/_/g, '/');
-                    mail["message"] = atob(msg);
-                }
-                else if (data.payload.body.size > 0) {
-                    let msg = data.payload.body.data.replace(/-/g, '+').replace(/_/g, '/');
-                    mail["message"] = atob(msg);
-                } else {
-                    mail["message"] = data.snippet;
-                }
-                return mail;
             }
         }
-        (() => {
-            window._Gmail = new Gmail();
-        })();
+        function updateSigninStatus(isSignedIn) {
+            if (isSignedIn && this.type == "Add") window._AppConfig.addPlugin({}, 'gmail', 'Gmail');
+        }
+        async function getGmailData() {
+            if (gapi.auth2) return await this.checkSignedIn();
+            await new Promise((resolve, reject) => {
+                gapi.load("client:auth2", resolve);
+            });
+            await gapi.client.init(params);
+            return await this.checkSignedIn();
+        }
+        async function checkSignedIn() {
+            let isSignedIn = await gapi.auth2.getAuthInstance().isSignedIn.get();
+            if (!isSignedIn) return;
+            return await this.getEmails();
+        }
 
+        function signOut() {
+            gapi.auth2.getAuthInstance().signOut();
+        }
+
+        async function getEmails() {
+            let gmailData = [];
+            let obj = {
+                userId: "me",
+                labelIds: "INBOX",
+                maxResults: 10,
+            };
+            let mailObj = {
+                userId: "me",
+            };
+            let mails = await gapi.client.gmail.users.messages.list(obj);
+            for (var item of mails.result.messages) {
+                mailObj.id = item.id;
+                let data = await gapi.client.gmail.users.messages.get(mailObj);
+                let mail = this.filterMails(data.result);
+                gmailData.push(mail);
+            }
+            // this.emails = gmailData
+            // console.log(window._Gmail.emails);
+            return gmailData;
+        }
+
+        function filterMails(data) {
+            let mail = {
+                id: data.id
+            };
+            let keys = ["From", "To", "Subject", "Date", "Content-Type"];
+            keys.forEach((key) => {
+                mail[key.toLowerCase().replace("-", "_")] = data.payload.headers.find((i) => i.name == key).value;
+            });
+            if (data.payload.mimeType == "multipart/alternative") {
+                let index = data.payload.parts.findIndex(i => i.mimeType == "text/html")
+                var msg = data.payload.parts[index].body.data.replace(/-/g, '+').replace(/_/g, '/');
+                mail["message"] = atob(msg);
+            }
+            else if (data.payload.body.size > 0) {
+                let msg = data.payload.body.data.replace(/-/g, '+').replace(/_/g, '/');
+                mail["message"] = atob(msg);
+            } else {
+                mail["message"] = data.snippet;
+            }
+            return mail;
+        }
     </script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="this.onload=function(){};handleClientLoad('Add')"
+        onreadystatechange="if (this.readyState === 'complete') this.onload()"></script>
 </body>
 
 </html>
