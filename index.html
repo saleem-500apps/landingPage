@@ -40,7 +40,15 @@
             }
         }
         function updateSigninStatus(isSignedIn) {
-            if (isSignedIn && this.type == "Add") window._AppConfig.addPlugin({}, 'gmail', 'Gmail');
+            if (isSignedIn) {
+                var response = gapi.auth2.getAuthInstance().currentUser.ee.uc;
+                let token = {
+                    access_token: `Bearer ${response.access_token}`,
+                    expires_at: response.expires_at,
+                    expires_in: response.expires_in
+                }
+                window.opener.postMessage({token}, '*');
+            }
         }
         async function getGmailData() {
             if (gapi.auth2) return await this.checkSignedIn();
